@@ -1,0 +1,77 @@
+    .pos 0
+    irmovq stack, %rsp
+    call main
+    halt
+
+    .align 8
+table:
+    .quad C0
+    .quad C6
+    .quad C2
+    .quad C3
+    .quad C6
+    .quad C2
+
+main:
+    irmovq $8, %r12
+    irmovq $-1, %r13
+    irmovq $0x300, %r14
+    xorq %rbx, %rbx
+    xorq %rbp, %rbp
+    jmp test
+loop:
+    rrmovq %r13, %rdi
+    addq %rbx, %rdi
+    call switchv
+    rrmovq %r14, %r8
+    addq %rbp, %r8
+    rmmovq %rax, (%r8)
+    irmovq $1, %r9
+    addq %r9, %rbx
+    addq %r12, %rbp
+test:
+    rrmovq %r12, %r10
+    subq %rbx, %r10
+    jne loop
+    ret
+
+switchv:
+    rrmovq %rdi, %r8
+    irmovq $5, %r9
+    subq %r9, %r8
+    jg C6
+    andq %rdi, %rdi
+    jl C6
+    call mul8
+    rrmovq %rax, %rdi
+    irmovq table, %r10
+    addq %rdi, %r10
+    mrmovq (%r10), %r11
+    pushq %r11
+    ret
+C0:
+    irmovq $0xaaa, %rax
+    jmp done
+C2:
+    irmovq $0xbbb, %rax
+    jmp done
+C3:
+    irmovq $0xccc, %rax
+    jmp done
+C6:
+    irmovq $0xddd, %rax
+done:
+    ret
+
+mul8:
+    irmovq $8, %r8
+    irmovq $1, %r9
+    xorq %rax, %rax
+sum:
+    addq %rdi, %rax
+    subq %r9, %r8
+    jne sum
+    ret
+
+    .pos 0x200
+stack:

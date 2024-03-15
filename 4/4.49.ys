@@ -1,0 +1,54 @@
+    .pos 0
+    irmovq stack, %rsp
+    call main
+    halt
+
+    .align 8
+array:
+    .quad 0x0000000000000003
+    .quad 0xfffffffffffffffe
+    .quad 0x0000000000000006
+    .quad 0x0000000000000005
+
+main:
+    irmovq array, %rdi
+    irmovq $4, %rsi
+    call bubble_p
+    ret
+
+bubble_p:
+    irmovq $1, %r8
+    subq %r8, %rsi
+    jmp test1
+loop1:
+    xorq %r9, %r9
+    rrmovq %rsi, %r10
+    andq %r10, %r10
+    jmp test2
+loop2:
+    rrmovq %rdi, %rax
+    addq %r9, %rax
+    mrmovq (%rax), %rcx
+    mrmovq 8(%rax), %rdx
+    rrmovq %rdx, %r11
+    subq %rcx, %r11
+    rrmovq %rcx, %r11
+    cmovl %rdx, %r11
+    addq %rcx, %rdx
+    rrmovq %r11, %rcx
+    subq %r11, %rdx
+    rmmovq %rcx, (%rax)
+    rmmovq %rdx, 8(%rax)
+update2:
+    irmovq $8, %r11
+    addq %r11, %r9
+    subq %r8, %r10
+test2:
+    jne loop2
+    subq %r8, %rsi
+test1:
+    jne loop1
+    ret
+
+    .pos 0x200
+stack:
