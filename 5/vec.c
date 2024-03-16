@@ -30,3 +30,7 @@ int get_vec_element(vec_ptr v, long index, data_t *dest) {
 long vec_length(vec_ptr v) {
     return v->len;
 }
+
+data_t *get_vec_start(vec_ptr v) {
+    return v->data;
+}

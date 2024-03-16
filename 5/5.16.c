@@ -15,7 +15,7 @@ void inner6(vec_ptr u, vec_ptr v, data_t *dest) {
         data_t uv3 = udata[i+3] * vdata[i+3];
         data_t uv4 = udata[i+4] * vdata[i+4];
         data_t uv5 = udata[i+5] * vdata[i+5];
-        sum = (((((sum + uv0) + uv1) + uv2) + uv3) + uv4) + uv5;
+        sum = sum + (uv0 + uv1 + uv2 + uv3 + uv4 + uv5);
     }
 
     for (; i < length; i++) {
