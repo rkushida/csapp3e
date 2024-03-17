@@ -14,12 +14,12 @@ void inner6(vec_ptr u, vec_ptr v, data_t *dest) {
     data_t sum5 = (data_t) 0;
 
     for (i = 0; i < limit; i += 6) {
-        sum0 = sum0 + udata[i] * vdata[i];
-        sum1 = sum1 + udata[i+1] * vdata[i+1];
-        sum2 = sum2 + udata[i+2] * vdata[i+2];
-        sum3 = sum3 + udata[i+3] * vdata[i+3];
-        sum4 = sum4 + udata[i+4] * vdata[i+4];
-        sum5 = sum5 + udata[i+5] * vdata[i+5];
+        sum0 += udata[i] * vdata[i];
+        sum1 += udata[i+1] * vdata[i+1];
+        sum2 += udata[i+2] * vdata[i+2];
+        sum3 += udata[i+3] * vdata[i+3];
+        sum4 += udata[i+4] * vdata[i+4];
+        sum5 += udata[i+5] * vdata[i+5];
     }
 
     for (; i < length; i++) {
