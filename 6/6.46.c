@@ -22,7 +22,7 @@ void effective_col_convert(int *G, int dim) {
         for (int j = 0; j + n <= dim; j += n) {
             for (int k = 0; k < n; k++) {
                 for (int l = 0; l < n; l++) {
-                    G[(j+l)*dim + (i+k)] = G[(j+l)*dim + (i+k)] || G[(i+k)*dim + (j+l)];
+                    G[(j+l)*dim + (i+k)] |= G[(i+k)*dim + (j+l)];
                 }
             }
         }
@@ -30,17 +30,17 @@ void effective_col_convert(int *G, int dim) {
     int c = (dim / n) * n;
     for (int i = 0; i < c; i++) {
         for (int j = c; j < dim; j++) {
-            G[j*dim + i] = G[j*dim + i] || G[i*dim + j];
+            G[j*dim + i] |= G[i*dim + j];
         }
     }
     for (int i = c; i < dim; i++) {
         for (int j = 0; j < c; j++) {
-            G[j*dim + i] = G[j*dim + i] || G[i*dim + j];
+            G[j*dim + i] |= G[i*dim + j];
         }
     }
     for (int i = c; i < dim; i++) {
         for (int j = c; j < dim; j++) {
-            G[j*dim + i] = G[j*dim + i] || G[i*dim + j];
+            G[j*dim + i] |= G[i*dim + j];
         }
     }
 }
