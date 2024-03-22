@@ -5,7 +5,7 @@
 #include <string.h>
 
 #define N 1024
-#define n 128
+#define n 16
 
 void col_convert(int *G, int dim) {
     int i, j;
@@ -19,10 +19,12 @@ void col_convert(int *G, int dim) {
 
 void effective_col_convert(int *G, int dim) {
     for (int i = 0; i + n <= dim; i += n) {
-        for (int j = 0; j + n <= dim; j += n) {
+        for (int j = i; j + n <= dim; j += n) {
             for (int k = 0; k < n; k++) {
                 for (int l = 0; l < n; l++) {
-                    G[(j+l)*dim + (i+k)] |= G[(i+k)*dim + (j+l)];
+                    int tmp = G[(j+l)*dim + (i+k)] | G[(i+k)*dim + (j+l)];
+                    G[(j+l)*dim + (i+k)] = tmp;
+                    G[(i+k)*dim + (j+l)] = tmp;
                 }
             }
         }
@@ -30,12 +32,9 @@ void effective_col_convert(int *G, int dim) {
     int c = (dim / n) * n;
     for (int i = 0; i < c; i++) {
         for (int j = c; j < dim; j++) {
-            G[j*dim + i] |= G[i*dim + j];
-        }
-    }
-    for (int i = c; i < dim; i++) {
-        for (int j = 0; j < c; j++) {
-            G[j*dim + i] |= G[i*dim + j];
+            int tmp = G[j*dim + i] | G[i*dim + j];
+            G[j*dim + i] = tmp;
+            G[i*dim + j] = tmp;
         }
     }
     for (int i = c; i < dim; i++) {
