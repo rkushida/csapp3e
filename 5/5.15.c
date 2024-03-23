@@ -1,4 +1,6 @@
-#include "vec.h"
+#include "inner4.h"
+#include <stdlib.h>
+#include <assert.h>
 
 void inner6(vec_ptr u, vec_ptr v, data_t *dest) {
     long i;
@@ -27,4 +29,22 @@ void inner6(vec_ptr u, vec_ptr v, data_t *dest) {
     }
 
     *dest = sum0 + sum1 + sum2 + sum3 + sum4 + sum5;
+}
+
+void set(vec_ptr u) {
+    for (int i = 0; i < u->len; i++) {
+        u->data[i] = (data_t)rand();
+    }
+}
+
+int main() {
+    long len = 16;
+    vec_ptr u = new_vec(len);
+    vec_ptr v = new_vec(len);
+    data_t dest, dest0;
+    set(u);
+    set(v);
+    inner4(u, v, &dest);
+    inner6(u, v, &dest0);
+    assert(dest == dest0);
 }

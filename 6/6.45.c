@@ -44,9 +44,8 @@ void effective_transpose(int *dst, int *src, int dim) {
 }
 
 void set(int *array, int length) {
-    long mod = (long)1 << 32;
     for (int i = 0; i < length; i++) {
-        *array = rand() % mod;
+        *array = rand();
         array++;
     }
 }
