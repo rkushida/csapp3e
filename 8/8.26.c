@@ -93,17 +93,6 @@ void deletejob(pid_t pid) {
     }
 }
 
-void setjobstatus(pid_t pid, int status) {
-    struct Job *cur = joblist;
-    while (cur != NULL) {
-        if (cur->pid == pid) {
-            cur->status = status;
-            return;
-        }
-        cur = cur->next;
-    }
-}
-
 int parsejobspec(char *jobspec, int *id) {
     if (!strncmp(jobspec, "%%", 1)) {
         *id = atoi(++jobspec);
@@ -242,6 +231,7 @@ int main() {
         printf("> ");
         Fgets(cmdline, MAXLINE, stdin);
         if (feof(stdin)) {
+            printf("exit\n");
             exit(0);
         }
         eval(cmdline);
