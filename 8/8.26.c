@@ -20,14 +20,12 @@ struct Job *joblist;
 volatile sig_atomic_t fgpid = 0;
 sigjmp_buf buf;
 
-struct Job *createjob(int jid, pid_t pid, char *cmdline) {
-    struct Job *job = (struct Job *)malloc(sizeof(struct Job));
-    job->jid = jid;
-    job->pid = pid;
-    job->status = JOB_RUNNING;
-    strcpy(job->cmdline, cmdline);
-    job->next = NULL;
-    return job;
+int count_argv(char **argv) {
+    int c = 0;
+    while (argv[c] != NULL) {
+        c++;
+    }
+    return c;
 }
 
 void printjob(struct Job *job, int all) {
@@ -37,6 +35,36 @@ void printjob(struct Job *job, int all) {
         printf("%s\t", status);
     }
     printf("%s", job->cmdline);
+}
+
+void printmsg(int jid, pid_t pid, int sig) {
+    Sio_puts("Job ");
+    if (jid != 0) {
+        Sio_puts("[");
+        Sio_putl(jid);
+        Sio_puts("]");
+        Sio_puts(" ");
+    }
+    Sio_putl(pid);
+    Sio_puts(" ");
+    Sio_puts(sig == SIGTSTP ? "stopped" : "terminated");
+    Sio_puts(" by signal: ");
+    Sio_puts(strsignal(sig));
+    Sio_puts("\n");
+}
+
+struct Job *createjob(int jid, pid_t pid, char *cmdline) {
+    struct Job *job = (struct Job *)malloc(sizeof(struct Job));
+    if (job == NULL) {
+        printf("malloc could not allocate memory\n");
+        exit(0);
+    }
+    job->jid = jid;
+    job->pid = pid;
+    job->status = JOB_RUNNING;
+    strcpy(job->cmdline, cmdline);
+    job->next = NULL;
+    return job;
 }
 
 void initjobs() {
@@ -65,63 +93,47 @@ void deletejob(pid_t pid) {
     }
 }
 
-void stopjob(pid_t pid) {
+void setjobstatus(pid_t pid, int status) {
     struct Job *cur = joblist;
     while (cur != NULL) {
         if (cur->pid == pid) {
-            cur->status = JOB_STOPPING;
+            cur->status = status;
             return;
         }
         cur = cur->next;
     }
 }
 
-int parsejob(char *job, int *id) {
-    if (!strncmp(job, "%%", 1)) {
-        *id = atoi(++job);
+int parsejobspec(char *jobspec, int *id) {
+    if (!strncmp(jobspec, "%%", 1)) {
+        *id = atoi(++jobspec);
         return 0;
     } else {
-        *id = atoi(job);
+        *id = atoi(jobspec);
         return 1;
     }
 }
 
-pid_t getjobpid(pid_t jid) {
-    struct Job *current = joblist;
-    while (current != NULL) {
-        if (current->jid == jid) {
-            return current->pid;
+struct Job *getjobbypid(pid_t pid) {
+    struct Job *cur = joblist;
+    while (cur != NULL) {
+        if (cur->pid == pid) {
+            return cur;
         }
-        current = current->next;
+        cur = cur->next;
     }
-    return 0;
+    return NULL;
 }
 
-pid_t getjobjid(pid_t pid) {
-    struct Job *current = joblist;
-    while (current != NULL) {
-        if (current->pid == pid) {
-            return current->jid;
+struct Job *getjobbyjid(pid_t jid) {
+    struct Job *cur = joblist;
+    while (cur != NULL) {
+        if (cur->jid == jid) {
+            return cur;
         }
-        current = current->next;
+        cur = cur->next;
     }
-    return 0;
-}
-
-void printmsg(int jid, pid_t pid, int sig) {
-    Sio_puts("Job ");
-    if (jid != 0) {
-        Sio_puts("[");
-        Sio_putl(jid);
-        Sio_puts("]");
-        Sio_puts(" ");
-    }
-    Sio_putl(pid);
-    Sio_puts(" ");
-    Sio_puts(sig == SIGTSTP ? "stopped" : "terminated");
-    Sio_puts(" by signal: ");
-    Sio_puts(strsignal(sig));
-    Sio_puts("\n");
+    return NULL;
 }
 
 void sigchld_handler() {
@@ -162,24 +174,16 @@ void sigtstp_handler() {
     Sio_puts("\n");
     if (fgpid != 0) {
         Sigprocmask(SIG_BLOCK, &mask_all, &prev_all);
-        pid_t jid = getjobjid(fgpid);
-        stopjob(fgpid);
-        Sigprocmask(SIG_SETMASK, &prev_all, NULL);
+        struct Job *job = getjobbypid(fgpid);
         Kill(-fgpid, SIGTSTP);
-        printmsg(jid, fgpid, SIGTSTP);
+        printmsg(job->jid, fgpid, SIGTSTP);
+        job->status = JOB_STOPPING;
         fgpid = 0;
+        Sigprocmask(SIG_SETMASK, &prev_all, NULL);
     } else {
         siglongjmp(buf, 1);
     }
     errno = olderrno;
-}
-
-int count_argv(char **argv) {
-    int c = 0;
-    while (argv[c] != NULL) {
-        c++;
-    }
-    return c;
 }
 
 void jobs() {
@@ -190,22 +194,41 @@ void jobs() {
     }
 }
 
-void fg(char *job) {
-    UNDEFINED_VARIABLE(job);
+void fg(char *jobspec) {
+    pid_t id;
+    sigset_t mask_all, prev_all;
+    Sigfillset(&mask_all);
+    int proc = parsejobspec(jobspec, &id);
+    Sigprocmask(SIG_BLOCK, &mask_all, &prev_all);
+    struct Job *job = proc ? getjobbypid(id) : getjobbyjid(id);
+    if (id == 0 || job == NULL) {
+        printf("%s: No such %s\n", jobspec, proc ? "process" : "job");
+    } else {
+        Kill(job->pid, SIGCONT);
+        job->status = JOB_RUNNING;
+        fgpid = job->pid;
+        while (fgpid) {
+            Sigsuspend(&prev_all);
+        }
+    }
+    Sigprocmask(SIG_SETMASK, &prev_all, NULL);
 }
 
-void bg(char *job) {
-    int id;
-    int proc = parsejob(job, &id);
-    if (id == 0) {
-        return;
-    }
-    if (proc) {
-        Kill(id, SIGCONT);
+void bg(char *jobspec) {
+    pid_t id;
+    sigset_t mask_all, prev_all;
+    Sigfillset(&mask_all);
+    int proc = parsejobspec(jobspec, &id);
+    Sigprocmask(SIG_BLOCK, &mask_all, &prev_all);
+    struct Job *job = proc ? getjobbypid(id) : getjobbyjid(id);
+    if (id == 0 || job == NULL) {
+        printf("%s: No such %s\n", jobspec, proc ? "process" : "job");
     } else {
-        pid_t pgid = getpgid(id);
-        Kill(pgid, SIGCONT);
+        Kill(job->pid, SIGCONT);
+        job->status = JOB_RUNNING;
+        printjob(job, 0);
     }
+    Sigprocmask(SIG_SETMASK, &prev_all, NULL);
 }
 
 int main() {
